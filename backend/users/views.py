@@ -15,12 +15,16 @@ from django.contrib.auth import authenticate, login, logout
 def register_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
-    class_name = request.data.get('class_name')
-    batch = request.data.get('batch')
-    role = request.data.get('role', 'student')  # default to student
+    class_name = request.data.get('class_name', '')  # Optional for admin
+    batch = request.data.get('batch', '')  # Optional for admin
+    role = request.data.get('role', 'student')
 
-    if not username or not password or not class_name or not batch:
-        return Response({"error": "Username, password, class_name and batch are required"}, status=400)
+    if not username or not password:
+        return Response({"error": "Username and password are required"}, status=400)
+
+    # Validate that students must provide class and batch
+    if role == 'student' and (not class_name or not batch):
+        return Response({"error": "Students must provide class_name and batch"}, status=400)
 
     if User.objects.filter(username=username).exists():
         return Response({"error": "Username already taken"}, status=400)
@@ -36,7 +40,11 @@ def register_view(request):
         batch=batch
     )
 
-    return Response({"message": "User registered", "user_id": user.id})
+    return Response({
+        "message": "User registered",
+        "user_id": user.id,
+        "role": role
+    })
 
 
 # --------------------------
@@ -59,7 +67,11 @@ def login_view(request):
         except UserProfile.DoesNotExist:
             return Response({"error": "UserProfile not found"}, status=404)
 
-        return Response({"message": "Login successful", "user_id": user.id})
+        return Response({
+            "message": "Login successful",
+            "user_id": user.id,
+            "role": profile.role  # Return the role from profile
+        })
 
     return Response({"error": "Invalid credentials"}, status=400)
 

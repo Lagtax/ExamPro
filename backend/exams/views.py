@@ -10,7 +10,7 @@ from .serializers import ExamSerializer, QuestionSerializer
 
 
 # --------------------------
-# List Exams
+# List Exams (UPDATED)
 # --------------------------
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -25,10 +25,20 @@ def exam_list(request):
     except UserProfile.DoesNotExist:
         return Response({"error": "UserProfile not found"}, status=404)
 
+    # Get all exams for this student's class and batch
     exams = Exam.objects.filter(
         allowed_class=profile.class_name,
         allowed_batch=profile.batch
     )
+
+    # Get all exam IDs that this student has already submitted
+    submitted_exam_ids = ExamAttempt.objects.filter(
+        student=profile,
+        is_submitted=True
+    ).values_list('exam_id', flat=True)
+
+    # Exclude submitted exams from the list
+    exams = exams.exclude(id__in=submitted_exam_ids)
 
     serializer = ExamSerializer(exams, many=True)
     return Response(serializer.data)
@@ -72,9 +82,6 @@ def exam_questions(request, exam_id):
     return Response(serializer.data)
 
 
-
-
-
 # --------------------------
 # Start Exam
 # --------------------------
@@ -108,7 +115,6 @@ def start_exam(request, exam_id):
         "start_time": attempt.start_time,
         "duration": exam.duration
     })
-
 
 
 # --------------------------
