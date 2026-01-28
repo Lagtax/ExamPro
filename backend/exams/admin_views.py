@@ -21,7 +21,7 @@ def admin_exam_list(request):
             'id': exam.id,
             'title': exam.title,
             'duration': exam.duration,
-            'total_marks': exam.total_marks,
+            'total_marks': question_count,  # Dynamic calculation
             'allowed_class': exam.allowed_class,
             'allowed_batch': exam.allowed_batch,
             'question_count': question_count
@@ -38,17 +38,15 @@ def admin_exam_list(request):
 def admin_create_exam(request):
     title = request.data.get('title')
     duration = request.data.get('duration')
-    total_marks = request.data.get('total_marks')
     allowed_class = request.data.get('allowed_class')
     allowed_batch = request.data.get('allowed_batch')
     
-    if not all([title, duration, total_marks, allowed_class, allowed_batch]):
+    if not all([title, duration, allowed_class, allowed_batch]):
         return Response({"error": "All fields required"}, status=400)
     
     exam = Exam.objects.create(
         title=title,
         duration=duration,
-        total_marks=total_marks,
         allowed_class=allowed_class,
         allowed_batch=allowed_batch
     )
@@ -74,8 +72,6 @@ def admin_update_exam(request, exam_id):
         exam.title = request.data['title']
     if 'duration' in request.data:
         exam.duration = request.data['duration']
-    if 'total_marks' in request.data:
-        exam.total_marks = request.data['total_marks']
     if 'allowed_class' in request.data:
         exam.allowed_class = request.data['allowed_class']
     if 'allowed_batch' in request.data:

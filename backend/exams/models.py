@@ -1,22 +1,20 @@
 from django.db import models
-
-# Create your models here.
 from users.models import UserProfile
 
 
-from django.db import models
-
 class Exam(models.Model):
     title = models.CharField(max_length=100)
-    duration = models.IntegerField()
-    total_marks = models.IntegerField()
-
+    duration = models.IntegerField()  # in minutes
     allowed_class = models.CharField(max_length=20)
     allowed_batch = models.CharField(max_length=20)
 
     def __str__(self):
         return self.title
-
+    
+    @property
+    def total_marks(self):
+        """Calculate total marks based on number of questions"""
+        return self.question_set.count()
 
 
 class Question(models.Model):
@@ -32,9 +30,6 @@ class Question(models.Model):
         return self.question_text
 
 
-
-
-
 class ExamAttempt(models.Model):
     student = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
@@ -47,10 +42,8 @@ class ExamAttempt(models.Model):
     class Meta:
         unique_together = ('student', 'exam')
         
+
 class Answer(models.Model):
     attempt = models.ForeignKey(ExamAttempt, on_delete=models.CASCADE)
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     selected_option = models.CharField(max_length=1)
-
-
-
