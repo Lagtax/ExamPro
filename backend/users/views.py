@@ -6,38 +6,40 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login, logout
 
-# --------------------------
-# Registration
-# --------------------------
+
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
-    class_name = request.data.get('class_name', '')  # Optional for admin
-    batch = request.data.get('batch', '')  # Optional for admin
+    email = request.data.get('email', '')
+    department = request.data.get('department', '')
+    batch = request.data.get('batch', '')
     role = request.data.get('role', 'student')
 
     if not username or not password:
         return Response({"error": "Username and password are required"}, status=400)
 
-    # Validate that students must provide class and batch
-    if role == 'student' and (not class_name or not batch):
-        return Response({"error": "Students must provide class_name and batch"}, status=400)
+    if role not in ['student', 'teacher', 'admin']:
+        return Response({"error": "Invalid role"}, status=400)
+
+    if role == 'student' and (not department or not batch):
+        return Response({"error": "Students must provide department and batch"}, status=400)
+    
+    if role == 'teacher' and not department:
+        return Response({"error": "Teachers must provide department"}, status=400)
 
     if User.objects.filter(username=username).exists():
         return Response({"error": "Username already taken"}, status=400)
 
-    # 1️⃣ Create auth user
-    user = User.objects.create_user(username=username, password=password)
+    user = User.objects.create_user(username=username, password=password, email=email)
 
-    # 2️⃣ Create UserProfile
     UserProfile.objects.create(
         user=user,
         role=role,
-        class_name=class_name,
-        batch=batch
+        department=department,
+        batch=batch if role == 'student' else ''
     )
 
     return Response({
@@ -47,9 +49,6 @@ def register_view(request):
     })
 
 
-# --------------------------
-# Login
-# --------------------------
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -61,7 +60,6 @@ def login_view(request):
     if user:
         login(request, user)
 
-        # Ensure UserProfile exists
         try:
             profile = UserProfile.objects.get(user=user)
         except UserProfile.DoesNotExist:
@@ -70,15 +68,14 @@ def login_view(request):
         return Response({
             "message": "Login successful",
             "user_id": user.id,
-            "role": profile.role  # Return the role from profile
+            "role": profile.role,
+            "department": profile.department
         })
 
     return Response({"error": "Invalid credentials"}, status=400)
 
 
-# --------------------------
-# Logout
-# --------------------------
+
 @api_view(['POST'])
 def logout_view(request):
     logout(request)

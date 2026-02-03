@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db.models import Q
 from proctoring.constants import MAX_VIOLATIONS
 
 from .models import Exam, Question, ExamAttempt, Answer
@@ -9,9 +10,7 @@ from users.models import UserProfile
 from .serializers import ExamSerializer, QuestionSerializer
 
 
-# --------------------------
-# List Exams (UPDATED)
-# --------------------------
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def exam_list(request):
@@ -25,32 +24,54 @@ def exam_list(request):
     except UserProfile.DoesNotExist:
         return Response({"error": "UserProfile not found"}, status=404)
 
-    # Get all exams for this student's class and batch
-    exams = Exam.objects.filter(
-        allowed_class=profile.class_name,
-        allowed_batch=profile.batch
-    )
+    now = timezone.now()
 
-    # Get all exam IDs that this student has already submitted
+    exams = Exam.objects.filter(
+        department=profile.department,  
+    ).filter(
+        Q(allowed_batch='') | Q(allowed_batch=profile.batch)
+    )
+    
+    
+    if hasattr(Exam, 'start_time'):
+        exams = exams.filter(
+            start_time__lte=now,  
+            end_time__gte=now     
+        )
+
     submitted_exam_ids = ExamAttempt.objects.filter(
         student=profile,
         is_submitted=True
     ).values_list('exam_id', flat=True)
 
-    # Exclude submitted exams from the list
     exams = exams.exclude(id__in=submitted_exam_ids)
 
-    serializer = ExamSerializer(exams, many=True)
-    return Response(serializer.data)
+    exam_data = []
+    for exam in exams:
+        data = {
+            'id': exam.id,
+            'title': exam.title,
+            'duration': exam.duration,
+            'department': exam.department,
+            'allowed_batch': exam.allowed_batch,
+            'total_marks': exam.total_marks,
+        }
+        
+        if hasattr(exam, 'start_time') and hasattr(exam, 'end_time'):
+            data['start_time'] = exam.start_time
+            data['end_time'] = exam.end_time
+            data['is_active'] = exam.is_active
+            data['time_remaining'] = (exam.end_time - now).total_seconds() / 3600  # hours
+        
+        exam_data.append(data)
+
+    return Response(exam_data)
 
 
-# --------------------------
-# Exam Questions
-# --------------------------
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def exam_questions(request, exam_id):
-    # 1️⃣ Get the user_id from query params
     user_id = request.query_params.get("user_id")
     if not user_id:
         return Response({"error": "user_id required"}, status=400)
@@ -60,31 +81,35 @@ def exam_questions(request, exam_id):
     except ValueError:
         return Response({"error": "Invalid user_id"}, status=400)
 
-    # 2️⃣ Fetch the user profile
     try:
         user = UserProfile.objects.get(user_id=user_id)
     except UserProfile.DoesNotExist:
         return Response({"error": "UserProfile not found"}, status=404)
 
-    # 3️⃣ Fetch the exam
     try:
         exam = Exam.objects.get(id=exam_id)
     except Exam.DoesNotExist:
         return Response({"error": "Exam not found"}, status=404)
 
-    # 4️⃣ Check batch/class restrictions
-    if exam.allowed_class != user.class_name or exam.allowed_batch != user.batch:
+    if exam.department != user.department:  # Changed from allowed_class
+        return Response({"error": "Not allowed"}, status=403)
+    
+    if exam.allowed_batch and exam.allowed_batch != user.batch:
         return Response({"error": "Not allowed"}, status=403)
 
-    # 5️⃣ Return all questions for this exam
+    if hasattr(exam, 'start_time') and hasattr(exam, 'end_time'):
+        now = timezone.now()
+        if now < exam.start_time:
+            return Response({"error": "Exam has not started yet"}, status=403)
+        if now > exam.end_time:
+            return Response({"error": "Exam has ended"}, status=403)
+
     questions = Question.objects.filter(exam_id=exam_id)
     serializer = QuestionSerializer(questions, many=True)
     return Response(serializer.data)
 
 
-# --------------------------
-# Start Exam
-# --------------------------
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def start_exam(request, exam_id):
@@ -99,8 +124,18 @@ def start_exam(request, exam_id):
     except (UserProfile.DoesNotExist, Exam.DoesNotExist):
         return Response({"error": "Invalid user or exam"}, status=404)
 
-    if exam.allowed_class != profile.class_name or exam.allowed_batch != profile.batch:
+    if exam.department != profile.department:  
         return Response({"error": "Not allowed"}, status=403)
+    
+    if exam.allowed_batch and exam.allowed_batch != profile.batch:
+        return Response({"error": "Not allowed"}, status=403)
+
+    if hasattr(exam, 'start_time') and hasattr(exam, 'end_time'):
+        now = timezone.now()
+        if now < exam.start_time:
+            return Response({"error": "Exam has not started yet"}, status=403)
+        if now > exam.end_time:
+            return Response({"error": "Exam has ended"}, status=403)
 
     attempt, created = ExamAttempt.objects.get_or_create(
         student=profile,
@@ -117,9 +152,7 @@ def start_exam(request, exam_id):
     })
 
 
-# --------------------------
-# Submit Exam
-# --------------------------
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def submit_exam(request, exam_id):
@@ -168,9 +201,7 @@ def submit_exam(request, exam_id):
     return Response({"message": "Exam submitted", "score": score})
 
 
-# --------------------------
-# Exam Result
-# --------------------------
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def exam_result(request, exam_id):
@@ -191,3 +222,54 @@ def exam_result(request, exam_id):
         "total_questions": total_questions,
         "submitted": attempt.is_submitted
     })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def mark_absent_students(request):
+    """
+    This endpoint should be called periodically (e.g., via cron job)
+    to mark students as absent for expired exams they didn't attend
+    """
+    now = timezone.now()
+    
+    if hasattr(Exam, 'end_time'):
+        expired_exams = Exam.objects.filter(end_time__lt=now)
+        
+        marked_count = 0
+        
+        for exam in expired_exams:
+            students = UserProfile.objects.filter(
+                role='student',
+                department=exam.department
+            )
+            
+            if exam.allowed_batch:
+                students = students.filter(batch=exam.allowed_batch)
+            
+            for student in students:
+                attempt, created = ExamAttempt.objects.get_or_create(
+                    student=student,
+                    exam=exam,
+                    defaults={
+                        'status': 'absent',
+                        'is_submitted': True,
+                        'score': 0,
+                        'end_time': exam.end_time
+                    }
+                )
+                
+                if not created and not attempt.is_submitted:
+                    attempt.status = 'absent'
+                    attempt.is_submitted = True
+                    attempt.score = 0
+                    attempt.end_time = exam.end_time
+                    attempt.save()
+                    marked_count += 1
+        
+        return Response({
+            "message": f"Marked {marked_count} students as absent",
+            "marked_count": marked_count
+        })
+    else:
+        return Response({"message": "Scheduling not enabled"})
