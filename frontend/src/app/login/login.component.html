@@ -1,0 +1,74 @@
+<div class="auth-container">
+  <div class="card auth-card">
+    <h1>ExamPro</h1>
+    <p class="text-muted">Sign in to continue</p>
+
+    <form (ngSubmit)="login()">
+      <div>
+        <label>Username</label>
+        <input 
+          type="text" 
+          [(ngModel)]="username" 
+          name="username" 
+          placeholder="Enter your username"
+          required>
+      </div>
+
+      <div>
+        <label>Password</label>
+        <input 
+          type="password" 
+          [(ngModel)]="password" 
+          name="password" 
+          placeholder="Enter your password"
+          required>
+      </div>
+
+      <div class="alert alert-danger" *ngIf="errorMsg">
+        {{ errorMsg }}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">
+        Login
+      </button>
+
+      <p class="text-center mt-2 text-muted" style="font-size: 13px;">
+        Don't have an account? 
+        <a routerLink="/register" style="color: #fff; text-decoration: none; font-weight: 500;">Register</a>
+      </p>
+    </form>
+  </div>
+</div>
+
+<style>
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  margin-bottom: 8px;
+}
+
+.auth-card form {
+  margin-top: 30px;
+  text-align: left;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+a:hover {
+  text-decoration: underline !important;
+}
+</style>

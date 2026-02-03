@@ -1,0 +1,306 @@
+<div class="result-container">
+  
+  <!-- Loading State -->
+  <div *ngIf="loading" class="card result-card text-center">
+    <div class="spinner"></div>
+    <p class="mt-2">Loading results...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="card result-card">
+    <div class="alert alert-danger">
+      <strong>Error:</strong> {{ error }}
+    </div>
+  </div>
+
+  <!-- Results Display -->
+  <div *ngIf="!loading && !error && submitted" class="card result-card">
+    <div class="result-header">
+      <h2>Exam Results</h2>
+    </div>
+
+    <!-- Score Display -->
+    <div class="score-display">
+      <div class="score-circle" [class.excellent]="percentage >= 80"
+                                 [class.good]="percentage >= 60 && percentage < 80"
+                                 [class.average]="percentage >= 40 && percentage < 60"
+                                 [class.needs-work]="percentage < 40">
+        <div class="score-content">
+          <div class="score-fraction">
+            <span class="score">{{ score }}</span>
+            <span class="divider">/</span>
+            <span class="total">{{ totalQuestions }}</span>
+          </div>
+          <div class="percentage">{{ percentage.toFixed(1) }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Message -->
+    <div class="result-message">
+      <div *ngIf="percentage >= 80" class="message success">
+        <h3>Excellent Work!</h3>
+        <p>Outstanding performance. Keep up the great work!</p>
+      </div>
+      <div *ngIf="percentage >= 60 && percentage < 80" class="message good">
+        <h3>Good Job!</h3>
+        <p>You did well. A little more practice and you'll ace it!</p>
+      </div>
+      <div *ngIf="percentage >= 40 && percentage < 60" class="message average">
+        <h3>Keep Practicing!</h3>
+        <p>You're on the right track. Keep studying and you'll improve!</p>
+      </div>
+      <div *ngIf="percentage < 40" class="message needs-work">
+        <h3>Don't Give Up!</h3>
+        <p>Everyone learns at their own pace. Keep practicing!</p>
+      </div>
+    </div>
+
+    <!-- Score Breakdown -->
+    <div class="score-breakdown">
+      <div class="stat">
+        <span class="stat-label">Correct Answers</span>
+        <span class="stat-value correct">{{ score }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Wrong Answers</span>
+        <span class="stat-value wrong">{{ totalQuestions - score }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Total Questions</span>
+        <span class="stat-value">{{ totalQuestions }}</span>
+      </div>
+    </div>
+
+    <button (click)="goHome()" class="btn btn-primary w-100 mt-3">
+      Back to Dashboard
+    </button>
+  </div>
+
+  <!-- Not Submitted State -->
+  <div *ngIf="!loading && !error && !submitted" class="card result-card">
+    <div class="alert alert-warning text-center">
+      <h3>Exam Not Submitted</h3>
+      <p>This exam has not been submitted yet.</p>
+    </div>
+    <button (click)="goHome()" class="btn btn-secondary w-100">
+      Back to Dashboard
+    </button>
+  </div>
+
+</div>
+
+<style>
+.result-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 20px;
+}
+
+.result-card {
+  width: 100%;
+  max-width: 600px;
+  padding: 40px;
+  text-align: center;
+}
+
+.result-header {
+  margin-bottom: 40px;
+}
+
+.result-header h2 {
+  margin-bottom: 10px;
+  font-size: 28px;
+}
+
+.result-icon {
+  font-size: 48px;
+  margin-top: 10px;
+}
+
+/* Score Display */
+.score-display {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0;
+}
+
+.score-circle {
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 8px solid;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.score-circle.excellent {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.score-circle.good {
+  border-color: #2196F3;
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.score-circle.average {
+  border-color: #FF9800;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.score-circle.needs-work {
+  border-color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.score-content {
+  text-align: center;
+}
+
+.score-fraction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.score-fraction .score {
+  font-size: 56px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.score-fraction .divider {
+  font-size: 36px;
+  color: #666;
+}
+
+.score-fraction .total {
+  font-size: 36px;
+  font-weight: 600;
+  color: #999;
+}
+
+.percentage {
+  font-size: 28px;
+  font-weight: 600;
+  color: #aaa;
+}
+
+/* Result Message */
+.result-message {
+  margin: 30px 0;
+  padding: 25px;
+  border-radius: 12px;
+  background: #0d0d0d;
+  border: 1px solid #222;
+}
+
+.message h3 {
+  margin-bottom: 10px;
+  font-size: 22px;
+}
+
+.message p {
+  font-size: 15px;
+  color: #aaa;
+  margin: 0;
+}
+
+.message.success {
+  border-left: 4px solid #4CAF50;
+}
+
+.message.good {
+  border-left: 4px solid #2196F3;
+}
+
+.message.average {
+  border-left: 4px solid #FF9800;
+}
+
+.message.needs-work {
+  border-left: 4px solid #f44336;
+}
+
+/* Score Breakdown */
+.score-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin: 30px 0;
+}
+
+.stat {
+  background: #0d0d0d;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #222;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stat-value.correct {
+  color: #4CAF50;
+}
+
+.stat-value.wrong {
+  color: #f44336;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .result-card {
+    padding: 30px 20px;
+  }
+
+  .score-circle {
+    width: 200px;
+    height: 200px;
+  }
+
+  .score-fraction .score {
+    font-size: 42px;
+  }
+
+  .score-fraction .divider {
+    font-size: 28px;
+  }
+
+  .score-fraction .total {
+    font-size: 28px;
+  }
+
+  .percentage {
+    font-size: 22px;
+  }
+
+  .score-breakdown {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

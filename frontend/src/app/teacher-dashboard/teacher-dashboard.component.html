@@ -1,0 +1,543 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="card dashboard-header">
+    <div class="d-flex justify-between align-center">
+      <div>
+        <h1 class="mb-1">Teacher Dashboard</h1>
+        <p class="text-muted text-small">Department: {{ department }}</p>
+      </div>
+      <div class="d-flex align-center gap-1">
+        <span class="text-muted text-small">Welcome, {{ username }}!</span>
+        <button (click)="logout()" class="btn btn-danger">
+          Logout
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs mt-2">
+    <button (click)="switchTab('exams')" 
+            [class.active]="activeTab === 'exams'"
+            class="nav-tab">
+      Exam Management
+    </button>
+    <button (click)="switchTab('performance')"
+            [class.active]="activeTab === 'performance'"
+            class="nav-tab">
+      Student Performance
+    </button>
+  </div>
+
+  <!-- ======================== EXAM MANAGEMENT TAB ======================== -->
+  <div *ngIf="activeTab === 'exams'">
+    
+    <div class="grid-2">
+      
+      <!-- Exam List -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h2>My Exams</h2>
+            <button (click)="openExamForm()" class="btn btn-success btn-sm">
+              + Create Exam
+            </button>
+          </div>
+
+          <div *ngFor="let exam of exams" class="exam-item">
+            <div class="exam-item-content">
+              <h3>{{ exam.title }}</h3>
+              <div class="exam-meta">
+                <p class="text-muted text-small">
+                  <strong>Duration:</strong> {{ exam.duration }} min | 
+                  <strong>Questions:</strong> {{ exam.question_count }} | 
+                  <strong>Attempts:</strong> {{ exam.attempts }}
+                </p>
+                <p class="text-muted text-small">
+                  <strong>Batch:</strong> {{ exam.allowed_batch || 'All Batches' }}
+                </p>
+                <p class="text-muted text-small">
+                  <strong>Start:</strong> {{ exam.start_time | date:'short' }}
+                </p>
+                <p class="text-muted text-small">
+                  <strong>End:</strong> {{ exam.end_time | date:'short' }}
+                </p>
+                <p class="mt-1">
+                  <span class="badge" [style.background]="getExamStatusColor(exam)">
+                    {{ getExamStatus(exam) }}
+                  </span>
+                </p>
+              </div>
+            </div>
+            
+            <div class="exam-actions">
+              <button (click)="selectExam(exam.id)" class="btn btn-info btn-sm">
+                Manage Questions
+              </button>
+              <button (click)="viewExamPerformance(exam.id); switchTab('performance')" class="btn btn-warning btn-sm">
+                View Performance
+              </button>
+              <button (click)="openExamForm(exam)" class="btn btn-secondary btn-sm">
+                Edit
+              </button>
+              <button (click)="deleteExam(exam.id, exam.title)" class="btn btn-danger btn-sm">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="exams.length === 0" class="text-center p-3">
+            <p class="text-muted">No exams created yet. Click "Create Exam" to get started!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Questions Panel -->
+      <div>
+        <div class="card" *ngIf="!selectedExamId">
+          <div class="text-center p-3">
+            <p class="text-muted" style="font-size: 18px;">Select an exam to manage questions</p>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="selectedExamId">
+          <div class="card-header">
+            <h2>Questions</h2>
+            <button (click)="openQuestionForm()" class="btn btn-success btn-sm">
+              + Add Question
+            </button>
+          </div>
+
+          <div *ngFor="let q of questions; let i = index" class="question-item">
+            <h4>Q{{ i + 1 }}: {{ q.question_text }}</h4>
+            <div class="question-options">
+              <p [class.correct-option]="q.correct_option === 'A'" class="option">
+                A: {{ q.option_a }} <span *ngIf="q.correct_option === 'A'" class="checkmark">✓</span>
+              </p>
+              <p [class.correct-option]="q.correct_option === 'B'" class="option">
+                B: {{ q.option_b }} <span *ngIf="q.correct_option === 'B'" class="checkmark">✓</span>
+              </p>
+              <p [class.correct-option]="q.correct_option === 'C'" class="option">
+                C: {{ q.option_c }} <span *ngIf="q.correct_option === 'C'" class="checkmark">✓</span>
+              </p>
+              <p [class.correct-option]="q.correct_option === 'D'" class="option">
+                D: {{ q.option_d }} <span *ngIf="q.correct_option === 'D'" class="checkmark">✓</span>
+              </p>
+            </div>
+            <div class="question-actions">
+              <button (click)="openQuestionForm(q)" class="btn btn-info btn-sm">
+                Edit
+              </button>
+              <button (click)="deleteQuestion(q.id)" class="btn btn-danger btn-sm">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="questions.length === 0" class="text-center p-3">
+            <p class="text-muted">No questions yet. Click "Add Question" to create one!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== PERFORMANCE TAB ======================== -->
+  <div *ngIf="activeTab === 'performance'">
+    
+    <div *ngIf="performanceData">
+      
+      <!-- Exam-specific Performance -->
+      <div *ngIf="selectedPerformanceExamId">
+        <div class="card">
+          <div class="card-header">
+            <h2>Performance: {{ performanceData.exam_title }}</h2>
+            <button (click)="viewOverallPerformance()" class="btn btn-info btn-sm">
+              View Overall Performance
+            </button>
+          </div>
+
+          <!-- Statistics Cards -->
+          <div class="grid-5 mt-2">
+            <div class="stat-card" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
+              <div class="stat-number">{{ performanceData.total_students }}</div>
+              <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);">
+              <div class="stat-number">{{ performanceData.submitted }}</div>
+              <div class="stat-label">Submitted</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #f44336 0%, #D32F2F 100%);">
+              <div class="stat-number">{{ performanceData.absent }}</div>
+              <div class="stat-label">Absent</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #666 0%, #555 100%);">
+              <div class="stat-number">{{ performanceData.not_attempted }}</div>
+              <div class="stat-label">Not Attempted</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
+              <div class="stat-number">{{ performanceData.average_percentage | number:'1.1-1' }}%</div>
+              <div class="stat-label">Average</div>
+            </div>
+          </div>
+
+          <!-- Student List Table -->
+          <div class="card mt-2" style="padding: 0;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Student Name</th>
+                  <th>Batch</th>
+                  <th class="text-center">Score</th>
+                  <th class="text-center">Percentage</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Violations</th>
+                  <th class="text-center">Time Taken</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let student of performanceData.students; let i = index">
+                  <td class="text-center">
+                    <span *ngIf="student.status === 'submitted'" style="font-weight: bold;">{{ i + 1 }}</span>
+                    <span *ngIf="student.status !== 'submitted'" class="text-muted">-</span>
+                  </td>
+                  <td><strong>{{ student.student_name }}</strong></td>
+                  <td>{{ student.batch }}</td>
+                  <td class="text-center">
+                    <strong>{{ student.score }}</strong> / {{ student.total_marks }}
+                  </td>
+                  <td class="text-center">
+                    <span [style.color]="getPercentageColor(student.percentage)" style="font-weight: bold;">
+                      {{ student.percentage | number:'1.1-1' }}%
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge" [style.background]="getStatusColor(student.status)">
+                      {{ student.status.replace('_', ' ') }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span [style.color]="student.violations > 0 ? '#f44336' : '#666'">
+                      {{ student.violations }}
+                    </span>
+                  </td>
+                  <td class="text-center text-small">
+                    <span *ngIf="student.start_time && student.end_time">
+                      {{ getTimeTaken(student.start_time, student.end_time) }}
+                    </span>
+                    <span *ngIf="!student.start_time" class="text-muted">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall Department Performance -->
+      <div *ngIf="!selectedPerformanceExamId">
+        <div class="card">
+          <h2 class="mb-2">Overall Department Performance</h2>
+          <p class="text-muted mb-3">
+            Department: {{ performanceData.department }} | 
+            Total Students: {{ performanceData.total_students }} | 
+            Total Exams: {{ performanceData.total_exams }}
+          </p>
+
+          <div style="padding: 0;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Batch</th>
+                  <th class="text-center">Total Exams</th>
+                  <th class="text-center">Submitted</th>
+                  <th class="text-center">Absent</th>
+                  <th class="text-center">Not Attempted</th>
+                  <th class="text-center">Avg Score</th>
+                  <th class="text-center">Avg %</th>
+                  <th class="text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container *ngFor="let student of performanceData.students; let i = index">
+                  <tr>
+                    <td><strong>{{ student.student_name }}</strong></td>
+                    <td>{{ student.batch }}</td>
+                    <td class="text-center">{{ student.total_exams }}</td>
+                    <td class="text-center">
+                      <span style="color: #4CAF50; font-weight: bold;">{{ student.submitted }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span style="color: #f44336; font-weight: bold;">{{ student.absent }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span style="color: #9E9E9E; font-weight: bold;">{{ student.not_attempted }}</span>
+                    </td>
+                    <td class="text-center">{{ student.average_score | number:'1.1-1' }}</td>
+                    <td class="text-center">
+                      <span [style.color]="getPercentageColor(student.average_percentage)" style="font-weight: bold;">
+                        {{ student.average_percentage | number:'1.1-1' }}%
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <button (click)="toggleStudentExams(student)" class="btn btn-info btn-sm">
+                        {{ student.showExams ? 'Hide' : 'Show' }} Exams
+                      </button>
+                    </td>
+                  </tr>
+                  
+                  <!-- Expanded exam details row -->
+                  <tr *ngIf="student.showExams" class="expanded-row">
+                    <td colspan="9" style="padding: 20px; background: #0d0d0d;">
+                      <div style="margin-left: 20px;">
+                        <h4 class="mb-2">Exam Details for {{ student.student_name }}</h4>
+                        <table style="background: #151515; border: 1px solid #222;">
+                          <thead>
+                            <tr style="background: #1a1a1a;">
+                              <th>Exam</th>
+                              <th class="text-center">Score</th>
+                              <th class="text-center">Percentage</th>
+                              <th class="text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let exam of student.exam_details">
+                              <td>{{ exam.exam_title }}</td>
+                              <td class="text-center">{{ exam.score }} / {{ exam.total_marks }}</td>
+                              <td class="text-center">{{ exam.percentage | number:'1.1-1' }}%</td>
+                              <td class="text-center">
+                                <span class="badge" [style.background]="getStatusColor(exam.status)">
+                                  {{ exam.status.replace('_', ' ') }}
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!performanceData" class="card">
+      <div class="text-center p-3">
+        <div class="spinner"></div>
+        <p class="text-muted mt-2">Loading performance data...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== EXAM FORM MODAL ======================== -->
+  <div *ngIf="showExamForm" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>{{ examForm.id ? 'Edit Exam' : 'Create New Exam' }}</h2>
+      </div>
+      <form (ngSubmit)="saveExam()">
+        <div>
+          <label>Title</label>
+          <input type="text" [(ngModel)]="examForm.title" name="title" required placeholder="Enter exam title">
+        </div>
+
+        <div>
+          <label>Duration (minutes)</label>
+          <input type="number" [(ngModel)]="examForm.duration" name="duration" required placeholder="e.g., 60">
+        </div>
+
+        <div>
+          <label>Batch (leave empty for all batches)</label>
+          <input type="text" [(ngModel)]="examForm.allowed_batch" name="allowed_batch" placeholder="e.g., 2024-A">
+        </div>
+
+        <div>
+          <label>Start Time</label>
+          <input type="datetime-local" [(ngModel)]="examForm.start_time" name="start_time" required>
+        </div>
+
+        <div>
+          <label>End Time</label>
+          <input type="datetime-local" [(ngModel)]="examForm.end_time" name="end_time" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeExamForm()" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-success">
+            {{ examForm.id ? 'Update' : 'Create' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================== QUESTION FORM MODAL ======================== -->
+  <div *ngIf="showQuestionForm" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>{{ questionForm.id ? 'Edit Question' : 'Add New Question' }}</h2>
+      </div>
+      <form (ngSubmit)="saveQuestion()">
+        <div>
+          <label>Question Text</label>
+          <textarea [(ngModel)]="questionForm.question_text" name="question_text" rows="3" required placeholder="Enter your question"></textarea>
+        </div>
+
+        <div>
+          <label>Option A</label>
+          <input type="text" [(ngModel)]="questionForm.option_a" name="option_a" required placeholder="Enter option A">
+        </div>
+
+        <div>
+          <label>Option B</label>
+          <input type="text" [(ngModel)]="questionForm.option_b" name="option_b" required placeholder="Enter option B">
+        </div>
+
+        <div>
+          <label>Option C</label>
+          <input type="text" [(ngModel)]="questionForm.option_c" name="option_c" required placeholder="Enter option C">
+        </div>
+
+        <div>
+          <label>Option D</label>
+          <input type="text" [(ngModel)]="questionForm.option_d" name="option_d" required placeholder="Enter option D">
+        </div>
+
+        <div>
+          <label>Correct Option</label>
+          <select [(ngModel)]="questionForm.correct_option" name="correct_option" required>
+            <option value="" disabled selected>Select correct option</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeQuestionForm()" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-success">
+            {{ questionForm.id ? 'Update' : 'Add' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+.dashboard-header {
+  margin-bottom: 0;
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 15px;
+}
+
+.exam-item {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  transition: all 0.2s;
+}
+
+.exam-item:hover {
+  border-color: #333;
+  transform: translateY(-2px);
+}
+
+.exam-item-content h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.exam-meta p {
+  margin: 5px 0;
+}
+
+.exam-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.question-item {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.question-item h4 {
+  margin-bottom: 15px;
+}
+
+.question-options {
+  margin-left: 15px;
+  margin-bottom: 15px;
+}
+
+.option {
+  padding: 8px 10px;
+  border-radius: 4px;
+  margin: 5px 0;
+  background: transparent;
+  border: 1px solid #1a1a1a;
+  color: #ccc;
+}
+
+.correct-option {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: #4CAF50;
+}
+
+.checkmark {
+  color: #4CAF50;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.question-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.expanded-row {
+  background: #0d0d0d !important;
+}
+
+@media (max-width: 768px) {
+  .grid-5 {
+    grid-template-columns: 1fr;
+  }
+  
+  .exam-actions {
+    flex-direction: column;
+  }
+  
+  .exam-actions button {
+    width: 100%;
+  }
+}
+</style>

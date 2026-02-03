@@ -1,0 +1,106 @@
+<div class="auth-container">
+  <div class="card auth-card">
+    <h1>Create Account</h1>
+    <p class="text-muted">Join ExamPro today</p>
+
+    <form (ngSubmit)="register()">
+      <div>
+        <label>Username</label>
+        <input 
+          type="text" 
+          [(ngModel)]="username" 
+          name="username" 
+          placeholder="Choose a username"
+          required>
+      </div>
+
+      <div>
+        <label>Email (Optional)</label>
+        <input 
+          type="email" 
+          [(ngModel)]="email" 
+          name="email" 
+          placeholder="your@email.com">
+      </div>
+
+      <div>
+        <label>Password</label>
+        <input 
+          type="password" 
+          [(ngModel)]="password" 
+          name="password" 
+          placeholder="Choose a strong password"
+          required>
+      </div>
+
+      <div>
+        <label>Role</label>
+        <select [(ngModel)]="role" name="role" required>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div *ngIf="role === 'student' || role === 'teacher'">
+        <label>Department</label>
+        <input 
+          type="text" 
+          [(ngModel)]="department" 
+          name="department" 
+          placeholder="e.g., Computer Science">
+      </div>
+
+      <div *ngIf="role === 'student'">
+        <label>Batch</label>
+        <input 
+          type="text" 
+          [(ngModel)]="batch" 
+          name="batch" 
+          placeholder="e.g., 2024">
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 mt-2">
+        Register
+      </button>
+
+      <p class="text-center mt-2 text-muted" style="font-size: 13px;">
+        Already have an account? 
+        <a routerLink="/" style="color: #fff; text-decoration: none; font-weight: 500;">Login</a>
+      </p>
+    </form>
+  </div>
+</div>
+
+<style>
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  margin-bottom: 8px;
+}
+
+.auth-card form {
+  margin-top: 30px;
+  text-align: left;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+a:hover {
+  text-decoration: underline !important;
+}
+</style>

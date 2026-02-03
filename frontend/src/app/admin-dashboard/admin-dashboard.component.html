@@ -1,0 +1,404 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="card dashboard-header">
+    <div class="d-flex justify-between align-center">
+      <div>
+        <h1 class="mb-1">Admin Dashboard</h1>
+        <p class="text-muted text-small">Welcome back, {{ username }}!</p>
+      </div>
+      <button (click)="logout()" class="btn btn-danger">
+        Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs mt-2">
+    <button 
+      class="nav-tab" 
+      [class.active]="activeTab === 'users'"
+      (click)="switchTab('users')">
+      User Management
+    </button>
+    <button 
+      class="nav-tab" 
+      [class.active]="activeTab === 'exams'"
+      (click)="switchTab('exams')">
+      Exam Management
+    </button>
+  </div>
+
+  <!-- USER MANAGEMENT TAB -->
+  <div *ngIf="activeTab === 'users'" class="card">
+    <div class="card-header">
+      <h2>Users</h2>
+      <button (click)="openUserForm()" class="btn btn-success">
+        + Add User
+      </button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Department</th>
+          <th>Batch</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users">
+          <td>{{ user.username }}</td>
+          <td>{{ user.email || '-' }}</td>
+          <td>
+            <span class="badge" 
+                  [class.badge-info]="user.role === 'admin'"
+                  [class.badge-success]="user.role === 'teacher'"
+                  [class.badge-secondary]="user.role === 'student'">
+              {{ user.role }}
+            </span>
+          </td>
+          <td>{{ user.department || '-' }}</td>
+          <td>{{ user.batch || '-' }}</td>
+          <td>
+            <button (click)="openUserForm(user)" class="btn btn-info btn-sm">
+              Edit
+            </button>
+            <button (click)="deleteUser(user.id, user.username)" class="btn btn-danger btn-sm">
+              Delete
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- EXAM MANAGEMENT TAB -->
+  <div *ngIf="activeTab === 'exams'" class="card">
+    <div class="card-header">
+      <h2>Exams</h2>
+      <button (click)="openExamForm()" class="btn btn-success">
+        + Add Exam
+      </button>
+    </div>
+
+    <div class="exam-list">
+      <div *ngFor="let exam of exams" class="exam-item">
+        <div class="exam-info">
+          <h3>{{ exam.title }}</h3>
+          <div class="exam-meta">
+            <span class="text-muted">Duration: {{ exam.duration }} min</span>
+            <span class="text-muted">Department: {{ exam.department }}</span>
+            <span class="text-muted">Batch: {{ exam.allowed_batch || 'All' }}</span>
+            <span class="text-muted">Questions: {{ exam.question_count }}</span>
+          </div>
+        </div>
+        <div class="exam-actions">
+          <button (click)="selectExam(exam.id)" class="btn btn-info btn-sm">
+            Manage Questions
+          </button>
+          <button (click)="openExamForm(exam)" class="btn btn-warning btn-sm">
+            Edit
+          </button>
+          <button (click)="deleteExam(exam.id, exam.title)" class="btn btn-danger btn-sm">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="exams.length === 0" class="text-center p-3">
+        <p class="text-muted">No exams created yet.</p>
+      </div>
+    </div>
+
+    <!-- Questions Panel (if exam selected) -->
+    <div *ngIf="selectedExamId" class="mt-3">
+      <div class="card-header">
+        <h2>Questions for Selected Exam</h2>
+        <button (click)="openQuestionForm()" class="btn btn-success">
+          + Add Question
+        </button>
+      </div>
+
+      <div *ngFor="let q of questions; let i = index" class="question-item">
+        <h4>Q{{ i + 1 }}: {{ q.question_text }}</h4>
+        <div class="options">
+          <p [class.correct]="q.correct_option === 'A'">A: {{ q.option_a }}</p>
+          <p [class.correct]="q.correct_option === 'B'">B: {{ q.option_b }}</p>
+          <p [class.correct]="q.correct_option === 'C'">C: {{ q.option_c }}</p>
+          <p [class.correct]="q.correct_option === 'D'">D: {{ q.option_d }}</p>
+        </div>
+        <div class="question-actions">
+          <button (click)="openQuestionForm(q)" class="btn btn-info btn-sm">Edit</button>
+          <button (click)="deleteQuestion(q.id)" class="btn btn-danger btn-sm">Delete</button>
+        </div>
+      </div>
+
+      <div *ngIf="questions.length === 0" class="text-center p-3">
+        <p class="text-muted">No questions yet.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- USER FORM MODAL -->
+<div *ngIf="showUserForm" class="modal-overlay" (click)="closeUserForm()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ userForm.id ? 'Edit User' : 'Create New User' }}</h2>
+    </div>
+
+    <form (submit)="saveUser(); $event.preventDefault()">
+      <div>
+        <label>Username</label>
+        <input type="text" [(ngModel)]="userForm.username" name="username" required>
+      </div>
+
+      <div>
+        <label>Email</label>
+        <input type="email" [(ngModel)]="userForm.email" name="email">
+      </div>
+
+      <div *ngIf="!userForm.id">
+        <label>Password</label>
+        <input type="password" [(ngModel)]="userForm.password" name="password" required>
+      </div>
+
+      <div>
+        <label>Role</label>
+        <select [(ngModel)]="userForm.role" name="role" required>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div *ngIf="userForm.role === 'student' || userForm.role === 'teacher'">
+        <label>Department</label>
+        <input type="text" [(ngModel)]="userForm.department" name="department">
+      </div>
+
+      <div *ngIf="userForm.role === 'student'">
+        <label>Batch</label>
+        <input type="text" [(ngModel)]="userForm.batch" name="batch">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" (click)="closeUserForm()" class="btn btn-secondary">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          {{ userForm.id ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EXAM FORM MODAL - FIXED -->
+<div *ngIf="showExamForm" class="modal-overlay" (click)="closeExamForm()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ examForm.id ? 'Edit Exam' : 'Create New Exam' }}</h2>
+    </div>
+
+    <!-- IMPORTANT: Using (submit) with preventDefault -->
+    <form (submit)="saveExam(); $event.preventDefault()">
+      <div>
+        <label>Title *</label>
+        <input 
+          type="text" 
+          [(ngModel)]="examForm.title" 
+          name="title" 
+          placeholder="Enter exam title"
+          required>
+      </div>
+
+      <div>
+        <label>Duration (minutes) *</label>
+        <input 
+          type="number" 
+          [(ngModel)]="examForm.duration" 
+          name="duration" 
+          min="1"
+          placeholder="60"
+          required>
+      </div>
+
+      <div>
+        <label>Department *</label>
+        <input 
+          type="text" 
+          [(ngModel)]="examForm.department" 
+          name="department" 
+          placeholder="e.g., Computer Science"
+          required>
+      </div>
+
+      <div>
+        <label>Allowed Batch (leave empty for all)</label>
+        <input 
+          type="text" 
+          [(ngModel)]="examForm.allowed_batch" 
+          name="allowed_batch"
+          placeholder="e.g., 2024">
+      </div>
+
+      <div>
+        <label>Start Time *</label>
+        <input 
+          type="datetime-local" 
+          [(ngModel)]="examForm.start_time" 
+          name="start_time" 
+          required>
+      </div>
+
+      <div>
+        <label>End Time *</label>
+        <input 
+          type="datetime-local" 
+          [(ngModel)]="examForm.end_time" 
+          name="end_time" 
+          required>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" (click)="closeExamForm()" class="btn btn-secondary">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          {{ examForm.id ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- QUESTION FORM MODAL -->
+<div *ngIf="showQuestionForm" class="modal-overlay" (click)="closeQuestionForm()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ questionForm.id ? 'Edit Question' : 'Create New Question' }}</h2>
+    </div>
+
+    <form (submit)="saveQuestion(); $event.preventDefault()">
+      <div>
+        <label>Question Text</label>
+        <textarea 
+          [(ngModel)]="questionForm.question_text" 
+          name="question_text" 
+          rows="3" 
+          required></textarea>
+      </div>
+
+      <div>
+        <label>Option A</label>
+        <input type="text" [(ngModel)]="questionForm.option_a" name="option_a" required>
+      </div>
+
+      <div>
+        <label>Option B</label>
+        <input type="text" [(ngModel)]="questionForm.option_b" name="option_b" required>
+      </div>
+
+      <div>
+        <label>Option C</label>
+        <input type="text" [(ngModel)]="questionForm.option_c" name="option_c" required>
+      </div>
+
+      <div>
+        <label>Option D</label>
+        <input type="text" [(ngModel)]="questionForm.option_d" name="option_d" required>
+      </div>
+
+      <div>
+        <label>Correct Option</label>
+        <select [(ngModel)]="questionForm.correct_option" name="correct_option" required>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" (click)="closeQuestionForm()" class="btn btn-secondary">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          {{ questionForm.id ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+.exam-list {
+  margin-top: 20px;
+}
+
+.exam-item {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exam-info h3 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.exam-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+}
+
+.exam-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.question-item {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.question-item h4 {
+  margin-bottom: 10px;
+}
+
+.options p {
+  padding: 5px;
+  margin: 5px 0;
+}
+
+.options p.correct {
+  background: rgba(76, 175, 80, 0.1);
+  border-left: 3px solid #4CAF50;
+  padding-left: 10px;
+}
+
+.question-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+</style>

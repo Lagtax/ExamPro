@@ -1,0 +1,116 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="card dashboard-header">
+    <div class="d-flex justify-between align-center">
+      <div>
+        <h1 class="mb-1">Student Dashboard</h1>
+        <p class="text-muted text-small">Welcome back, {{ username }}!</p>
+      </div>
+      <button (click)="logout()" class="btn btn-danger">
+        Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- Available Exams -->
+  <div class="card mt-2">
+    <div class="card-header">
+      <h2>Available Exams</h2>
+    </div>
+
+    <div *ngIf="exams.length === 0" class="text-center p-3">
+      <p class="text-muted">No exams available at the moment.</p>
+    </div>
+
+    <div class="exam-grid">
+      <div *ngFor="let exam of exams" class="exam-card">
+        <h3>{{ exam.title }}</h3>
+        <div class="exam-details">
+          <div class="detail-row">
+            <span class="text-muted">Duration:</span>
+            <span>{{ exam.duration }} minutes</span>
+          </div>
+          <div class="detail-row">
+            <span class="text-muted">Department:</span>
+            <span>{{ exam.department }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="text-muted">Batch:</span>
+            <span>{{ exam.allowed_batch || 'All' }}</span>
+          </div>
+          <div class="detail-row" *ngIf="exam.total_marks">
+            <span class="text-muted">Total Marks:</span>
+            <span>{{ exam.total_marks }}</span>
+          </div>
+        </div>
+        <button (click)="startExam(exam.id)" class="btn btn-primary w-100 mt-2">
+          Start Exam
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+.dashboard-header {
+  margin-bottom: 0;
+}
+
+.exam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.exam-card {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.exam-card:hover {
+  border-color: #333;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.exam-card h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.exam-details {
+  margin-bottom: 15px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 14px;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .exam-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
